@@ -68,9 +68,6 @@ PATCH /admin/tasks/:id/assign
 
 ---
 
-
----
-
 ## 🧑‍💻 Setup Instructions
 
 ### 1. Clone Repository
