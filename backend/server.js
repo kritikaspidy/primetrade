@@ -10,7 +10,7 @@ const { errorHandler, notFoundHandler } = require('./middleware/errorhandler');
 
 const app = express();
 app.use(cors({
-  origin: "https://vercel.com/kritikas-projects-bb3a5330/primetrade/AbkAg7x2TZG1FVaHBwS6DsXTGvud",
+  origin: "https://primetrade-jade.vercel.app/",
   credentials: true
 }));
 app.use(express.json());
