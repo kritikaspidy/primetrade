@@ -28,17 +28,5 @@ app.use('/api/v1', adminRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-const startServer = async () => {
-  try {
-    await pool.query('SELECT 1');
-    console.log('Database connected successfully');
-    app.listen(port, () => {
-      console.log(`Server is running on port ${port}`);
-    });
-  } catch (err) {
-    console.error('Failed to connect to database:', err.message);
-    process.exit(1);
-  }
-};
-
-startServer();
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on ${PORT}`));
