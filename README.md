@@ -21,6 +21,14 @@ Users can create and manage their own tasks, while admins can manage users and a
 - View all users
 - Delete users
 
+### System Features
+- Secure authentication using JWT
+- Password hashing using bcrypt
+- Protected API routes
+- Multi-user task isolation 
+- Input validation on API requests
+- Centralized error handling
+
 ---
 
 ## Tech Stack
