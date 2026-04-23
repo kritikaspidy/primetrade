@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const initialState = {
   title: "",
@@ -9,21 +9,17 @@ const initialState = {
 };
 
 export default function TaskForm({ onSubmit, editingTask, onCancelEdit }) {
-  const [formData, setFormData] = useState(initialState);
-
-  useEffect(() => {
-    if (editingTask) {
-      setFormData({
-        title: editingTask.title || "",
-        description: editingTask.description || "",
-        status: editingTask.status || "pending",
-        priority: editingTask.priority || "medium",
-        due_date: editingTask.due_date ? editingTask.due_date.split("T")[0] : "",
-      });
-    } else {
-      setFormData(initialState);
-    }
-  }, [editingTask]);
+  const [formData, setFormData] = useState(() =>
+    editingTask
+      ? {
+          title: editingTask.title || "",
+          description: editingTask.description || "",
+          status: editingTask.status || "pending",
+          priority: editingTask.priority || "medium",
+          due_date: editingTask.dueDate ? editingTask.dueDate.split("T")[0] : "",
+        }
+      : initialState
+  );
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -41,8 +37,13 @@ export default function TaskForm({ onSubmit, editingTask, onCancelEdit }) {
   };
 
   return (
-    <form className="task-form" onSubmit={handleSubmit}>
-      <h3>{editingTask ? "Edit Task" : "Create Task"}</h3>
+    <form
+      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+      onSubmit={handleSubmit}
+    >
+      <h3 className="mb-4 text-lg font-semibold">
+        {editingTask ? "Edit Task" : "Create Task"}
+      </h3>
 
       <input
         type="text"
@@ -51,6 +52,7 @@ export default function TaskForm({ onSubmit, editingTask, onCancelEdit }) {
         value={formData.title}
         onChange={handleChange}
         required
+        className="mb-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
       />
 
       <textarea
@@ -58,15 +60,26 @@ export default function TaskForm({ onSubmit, editingTask, onCancelEdit }) {
         placeholder="Description"
         value={formData.description}
         onChange={handleChange}
+        className="mb-3 min-h-24 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
       />
 
-      <select name="status" value={formData.status} onChange={handleChange}>
+      <select
+        name="status"
+        value={formData.status}
+        onChange={handleChange}
+        className="mb-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+      >
         <option value="pending">Pending</option>
         <option value="in-progress">In Progress</option>
         <option value="completed">Completed</option>
       </select>
 
-      <select name="priority" value={formData.priority} onChange={handleChange}>
+      <select
+        name="priority"
+        value={formData.priority}
+        onChange={handleChange}
+        className="mb-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+      >
         <option value="low">Low</option>
         <option value="medium">Medium</option>
         <option value="high">High</option>
@@ -77,12 +90,22 @@ export default function TaskForm({ onSubmit, editingTask, onCancelEdit }) {
         name="due_date"
         value={formData.due_date}
         onChange={handleChange}
+        className="mb-4 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
       />
 
-      <div className="task-form-buttons">
-        <button type="submit">{editingTask ? "Update Task" : "Create Task"}</button>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button
+          type="submit"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
+        >
+          {editingTask ? "Update Task" : "Create Task"}
+        </button>
         {editingTask && (
-          <button type="button" onClick={onCancelEdit}>
+          <button
+            type="button"
+            onClick={onCancelEdit}
+            className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-800"
+          >
             Cancel
           </button>
         )}

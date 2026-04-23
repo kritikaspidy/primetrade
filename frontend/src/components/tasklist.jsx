@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import API from "../utils/api";
 
 export default function TaskList({
@@ -13,13 +13,7 @@ export default function TaskList({
   const [selectedUsers, setSelectedUsers] = useState({});
   const [assigningTaskId, setAssigningTaskId] = useState(null);
 
-  useEffect(() => {
-    if (user?.role === "admin") {
-      fetchUsers();
-    }
-  }, [user]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const res = await API.get("/admin/users");
       setUsers(res.data.users || []);
@@ -29,7 +23,13 @@ export default function TaskList({
         error.response?.data?.error || "Failed to fetch users"
       );
     }
-  };
+  }, [onMessage]);
+
+  useEffect(() => {
+    if (user?.role === "admin") {
+      fetchUsers();
+    }
+  }, [user, fetchUsers]);
 
   const handleSelectChange = (taskId, userId) => {
     setSelectedUsers((prev) => ({
@@ -65,56 +65,79 @@ export default function TaskList({
   };
 
   if (!tasks.length) {
-    return <div className="empty-state">No tasks found.</div>;
+    return (
+      <div className="grid min-h-40 place-items-center rounded-xl border border-dashed border-slate-300 text-sm text-slate-500">
+        No tasks found.
+      </div>
+    );
   }
 
   return (
-    <div className="task-list">
+    <div className="space-y-4 overflow-y-auto pr-1">
       {tasks.map((task) => (
-        <div className="task-card" key={task.id}>
-          <h4>{task.title}</h4>
-          <p>{task.description || "No description provided."}</p>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4" key={task.id}>
+          <h4 className="mb-2 text-base font-semibold">{task.title}</h4>
+          <p className="mb-2 text-sm text-slate-700">
+            {task.description || "No description provided."}
+          </p>
 
-          <p>
+          <p className="text-sm text-slate-700">
             <strong>Created By:</strong>{" "}
-            {users.find((u) => u.id === task.created_by)?.username || task.created_by}
-            </p>
+            {users.find((u) => u.id === task.createdBy)?.username || task.createdBy}
+          </p>
 
-          <p>
+          <p className="text-sm text-slate-700">
             <strong>Status:</strong>{" "}
-            <span className={`badge badge-${task.status}`}>{task.status}</span>
+            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
+              {task.status}
+            </span>
           </p>
 
-          <p>
+          <p className="text-sm text-slate-700">
             <strong>Priority:</strong>{" "}
-            <span className={`badge badge-${task.priority}`}>{task.priority}</span>
+            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-700">
+              {task.priority}
+            </span>
           </p>
 
-          <p>
+          <p className="text-sm text-slate-700">
             <strong>Due Date:</strong>{" "}
-            {task.due_date ? new Date(task.due_date).toLocaleDateString() : "N/A"}
+            {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A"}
           </p>
 
-          {task.assigned_to && (
-            <p>
-             <strong>Assigned To:</strong>{" "}
-{users.find((u) => u.id === task.assigned_to)?.username || task.assigned_to}
+          {task.assignedTo && (
+            <p className="text-sm text-slate-700">
+              <strong>Assigned To:</strong>{" "}
+              {users.find((u) => u.id === task.assignedTo)?.username || task.assignedTo}
             </p>
           )}
 
-          <div className="task-actions">
-            <button onClick={() => onEdit(task)}>Edit</button>
-            <button onClick={() => onDelete(task.id)}>Delete</button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={() => onEdit(task)}
+              className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => onDelete(task.id)}
+              className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white"
+            >
+              Delete
+            </button>
           </div>
 
           {user?.role === "admin" && (
-            <div className="assign-section">
-              <label className="assign-label">Assign task</label>
+            <div className="mt-4 border-t border-slate-200 pt-4">
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Assign task
+              </label>
 
-              <div className="assign-controls">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <select
                   value={selectedUsers[task.id] || ""}
                   onChange={(e) => handleSelectChange(task.id, e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 >
                   <option value="">Select user</option>
                   {users.filter((u) => u.role !== "admin").map((u) => (
@@ -125,7 +148,7 @@ export default function TaskList({
                 </select>
 
                 <button
-                  className="assign-btn"
+                  className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
                   onClick={() => handleAssign(task.id)}
                   disabled={assigningTaskId === task.id}
                 >

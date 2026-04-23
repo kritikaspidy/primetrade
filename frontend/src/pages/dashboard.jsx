@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import API from "../utils/api";
 import Navbar from "../components/navbar";
 import TaskForm from "../components/taskform";
@@ -17,17 +17,17 @@ export default function Dashboard() {
   const [taskSearch, setTaskSearch] = useState("");
   const [showUserModal, setShowUserModal] = useState(false);
 
-  const showMessage = (type, text) => {
+  const showMessage = useCallback((type, text) => {
     setMessageType(type);
     setMessage(text);
-  };
+  }, []);
 
   const clearMessage = () => {
     setMessage("");
     setMessageType("");
   };
 
-  const fetchTasks = async (currentUser) => {
+  const fetchTasks = useCallback(async (currentUser) => {
     try {
       setLoading(true);
 
@@ -45,7 +45,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showMessage]);
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -65,7 +65,7 @@ export default function Dashboard() {
     };
 
     loadDashboard();
-  }, []);
+  }, [fetchTasks, showMessage]);
 
   const handleCreateOrUpdate = async (formData) => {
     const payload = {
@@ -100,25 +100,27 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="page-shell">
+    <div className="min-h-screen bg-slate-50">
       <MessageBox type={messageType} message={message} onClose={clearMessage} />
 
       <Navbar user={user} />
 
-      <main className="dashboard-wrapper">
-        <section className="dashboard-header">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <section className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
           <div>
-            <p className="eyebrow">Workspace</p>
-            <h1>Task Dashboard</h1>
-            <p className="dashboard-subtext">
+            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-blue-600">
+              Workspace
+            </p>
+            <h1 className="text-3xl font-bold text-slate-900">Task Dashboard</h1>
+            <p className="mt-2 max-w-2xl text-slate-600">
               Manage your tasks, track priorities, and keep things under control.
             </p>
           </div>
 
-          <div className="dashboard-actions">
+          <div className="flex flex-wrap items-center gap-3">
             {user?.role === "admin" && (
               <button
-                className="admin-btn"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
                 onClick={() => setShowUserModal(true)}
               >
                 Manage Users
@@ -126,9 +128,9 @@ export default function Dashboard() {
             )}
 
             {user && (
-              <div className="profile-chip">
-                <span className="profile-chip-label">Logged in as</span>
-                <span className="profile-chip-name">
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                <span className="block text-xs text-slate-500">Logged in as</span>
+                <span className="text-sm font-semibold text-slate-800">
                   {user.username} ({user.role})
                 </span>
               </div>
@@ -136,33 +138,38 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <div className="dashboard-grid">
-          <aside className="left-panel">
+        <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
+          <aside>
             <TaskForm
+              key={editingTask?.id || "new-task"}
               onSubmit={handleCreateOrUpdate}
               editingTask={editingTask}
               onCancelEdit={() => setEditingTask(null)}
             />
           </aside>
 
-          <section className="tasks-panel">
-            <div className="panel-header">
-              <div className="task-header-left">
-                <h3>Your Tasks</h3>
-                <span className="task-count">{tasks.length} total</span>
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-semibold text-slate-900">Your Tasks</h3>
+                <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
+                  {tasks.length} total
+                </span>
               </div>
 
               <input
                 type="text"
                 placeholder="Search tasks..."
-                className="search-input"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm sm:max-w-xs"
                 value={taskSearch}
                 onChange={(e) => setTaskSearch(e.target.value)}
               />
             </div>
 
             {loading ? (
-              <div className="empty-state">Loading tasks...</div>
+              <div className="grid min-h-40 place-items-center rounded-xl border border-dashed border-slate-300 text-sm text-slate-500">
+                Loading tasks...
+              </div>
             ) : (
               <TaskList
                 tasks={tasks.filter(
@@ -190,17 +197,17 @@ export default function Dashboard() {
 
       {showUserModal && (
         <div
-          className="modal-overlay"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
           onClick={() => setShowUserModal(false)}
         >
           <div
-            className="modal-content"
+            className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="modal-header">
-              <h2>User Management</h2>
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-xl font-semibold">User Management</h2>
               <button
-                className="modal-close"
+                className="text-xl leading-none text-slate-500"
                 onClick={() => setShowUserModal(false)}
               >
                 ✕

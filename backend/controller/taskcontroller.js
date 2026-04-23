@@ -1,6 +1,7 @@
-const pool = require('../db');
+const { Op } = require('sequelize');
+const { Task } = require('../models');
 
-const createTask = async (req, res) => {
+const createTask = async (req, res, next) => {
   const { title, description, status, priority, due_date } = req.body;
 
   const normalizedDueDate = due_date === '' ? null : due_date;
@@ -21,90 +22,82 @@ const createTask = async (req, res) => {
       return res.status(400).json({ error: 'Invalid priority' });
     }
 
-    const result = await pool.query(
-      `INSERT INTO tasks (title, description, status, priority, due_date, created_by, assigned_to)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
-      [
-        title,
-        description || null,
-        status || 'pending',
-        priority || 'medium',
-        normalizedDueDate,
-        req.user.id,
-        req.user.id,
-      ]
-    );
+    const task = await Task.create({
+      title,
+      description: description || null,
+      status: status || 'pending',
+      priority: priority || 'medium',
+      dueDate: normalizedDueDate,
+      createdBy: req.user.id,
+      assignedTo: req.user.id,
+    });
 
     res.status(201).json({
       message: 'Task created successfully',
-      task: result.rows[0],
+      task,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return next(err);
   }
 };
 
-const getTasks = async (req, res) => {
+const getTasks = async (req, res, next) => {
   try {
-    const result = await pool.query(
-      `SELECT * FROM tasks
-       WHERE created_by = $1 OR assigned_to = $1
-       ORDER BY created_at DESC`,
-      [req.user.id]
-    );
+    const tasks = await Task.findAll({
+      where: {
+        [Op.or]: [{ createdBy: req.user.id }, { assignedTo: req.user.id }],
+      },
+      order: [['createdAt', 'DESC']],
+    });
 
     res.status(200).json({
       message: 'Tasks fetched successfully',
-      tasks: result.rows,
+      tasks,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return next(err);
   }
 };
 
-const getTaskById = async (req, res) => {
+const getTaskById = async (req, res, next) => {
   const { id } = req.params;
 
   try {
-    const result = await pool.query(
-      `SELECT * FROM tasks
-       WHERE id = $1 AND (created_by = $2 OR assigned_to = $2)`,
-      [id, req.user.id]
-    );
+    const task = await Task.findOne({
+      where: {
+        id,
+        [Op.or]: [{ createdBy: req.user.id }, { assignedTo: req.user.id }],
+      },
+    });
 
-    if (result.rows.length === 0) {
+    if (!task) {
       return res.status(404).json({ error: 'Task not found' });
     }
 
     res.status(200).json({
       message: 'Task fetched successfully',
-      task: result.rows[0],
+      task,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return next(err);
   }
 };
 
-const updateTask = async (req, res) => {
+const updateTask = async (req, res, next) => {
   const { id } = req.params;
   const { title, description, status, priority, due_date } = req.body;
 
   try {
-    const existingTask = await pool.query(
-      `SELECT * FROM tasks
-       WHERE id = $1 AND created_by = $2`,
-      [id, req.user.id]
-    );
+    const existingTask = await Task.findOne({
+      where: {
+        id,
+        createdBy: req.user.id,
+      },
+    });
 
-    if (existingTask.rows.length === 0) {
+    if (!existingTask) {
       return res.status(404).json({ error: 'Task not found' });
     }
-
-    const oldTask = existingTask.rows[0];
 
     const allowedStatuses = ['pending', 'in-progress', 'completed'];
     const allowedPriorities = ['low', 'medium', 'high'];
@@ -118,50 +111,37 @@ const updateTask = async (req, res) => {
     }
 
     const normalizedDueDate =
-      due_date === '' ? null : (due_date ?? oldTask.due_date);
+      due_date === '' ? null : (due_date ?? existingTask.dueDate);
 
-    const result = await pool.query(
-      `UPDATE tasks
-       SET title = $1,
-           description = $2,
-           status = $3,
-           priority = $4,
-           due_date = $5,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6
-       RETURNING *`,
-      [
-        title ?? oldTask.title,
-        description ?? oldTask.description,
-        status ?? oldTask.status,
-        priority ?? oldTask.priority,
-        normalizedDueDate,
-        id,
-      ]
-    );
+    await existingTask.update({
+      title: title ?? existingTask.title,
+      description: description ?? existingTask.description,
+      status: status ?? existingTask.status,
+      priority: priority ?? existingTask.priority,
+      dueDate: normalizedDueDate,
+    });
 
     res.status(200).json({
       message: 'Task updated successfully',
-      task: result.rows[0],
+      task: existingTask,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return next(err);
   }
 };
 
-const deleteTask = async (req, res) => {
+const deleteTask = async (req, res, next) => {
   const { id } = req.params;
 
   try {
-    const result = await pool.query(
-      `DELETE FROM tasks
-       WHERE id = $1 AND created_by = $2
-       RETURNING *`,
-      [id, req.user.id]
-    );
+    const result = await Task.destroy({
+      where: {
+        id,
+        createdBy: req.user.id,
+      },
+    });
 
-    if (result.rows.length === 0) {
+    if (!result) {
       return res.status(404).json({ error: 'Task not found' });
     }
 
@@ -169,8 +149,7 @@ const deleteTask = async (req, res) => {
       message: 'Task deleted successfully',
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return next(err);
   }
 };
 

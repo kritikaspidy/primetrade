@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
+const { User } = require('../models');
 
-const protect = (req, res, next) => {
+const protect = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -11,7 +12,15 @@ const protect = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    const user = await User.findByPk(decoded.id, {
+      attributes: ['id', 'username', 'role'],
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid token user' });
+    }
+
+    req.user = user;
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid token' });
